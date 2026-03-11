@@ -12,7 +12,7 @@ Supports any terminal: iTerm2, Terminal.app, VS Code, Cursor, Windsurf, Ghostty,
 ## Install
 
 ```bash
-npm install -g claude-code-notifier
+npm install -g @vibe-zzz/claude-code-notifier
 claude-code-notifier setup
 ```
 

@@ -12,7 +12,7 @@ Claude Code 的 macOS 通知提醒工具. 当 Claude 需要你确认权限或完
 ## 安装
 
 ```bash
-npm install -g claude-code-notifier
+npm install -g @vibe-zzz/claude-code-notifier
 claude-code-notifier setup
 ```
 
