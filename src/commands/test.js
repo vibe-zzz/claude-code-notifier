@@ -10,7 +10,12 @@ export async function run() {
   const config = readConfig();
   const terminal = detectTerminal();
 
+  const bundleId = terminal.bundleId || config.terminalBundleId || null;
+  const terminalPid = terminal.pid || null;
+
   console.log(`\nDetected terminal: ${terminal.name}`);
+  console.log(`Bundle ID: ${bundleId || '(not detected)'}`);
+  console.log(`Terminal PID: ${terminalPid || '(not detected)'}`);
   console.log(`Configured channels: ${config.channels.join(', ')}`);
   console.log(`Sound: ${config.sound}`);
   console.log('\nSending test notification...\n');
@@ -20,6 +25,8 @@ export async function run() {
       title: 'Claude Code Notifier',
       message: 'Test notification - if you see this, it works!',
       sound: config.sound,
+      bundleId,
+      terminalPid,
     });
     console.log('Test notification sent successfully!');
   } catch (err) {

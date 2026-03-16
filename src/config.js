@@ -16,6 +16,7 @@ const DEFAULT_CONFIG = {
   events: ['Notification', 'Stop'],
   sound: 'Ping',
   notifyWhenFocused: true,
+  terminalBundleId: null,
 };
 
 /**

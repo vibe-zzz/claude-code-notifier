@@ -3,7 +3,7 @@
  */
 
 import { execFileSync, execFile } from 'node:child_process';
-import { multiSelect, singleSelect, ask } from '../prompt.js';
+import { multiSelect, singleSelect } from '../prompt.js';
 import { writeConfig } from '../config.js';
 import { addHooks } from '../settings.js';
 import { detectTerminal } from '../terminal.js';
@@ -56,34 +56,48 @@ function installTerminalNotifier() {
 export async function run() {
   console.log('\nClaude Code Notifier Setup\n');
 
-  // 0. Check terminal-notifier dependency
+  // 0. terminal-notifier is required - enforce installation before proceeding
   if (!hasTerminalNotifier()) {
-    console.log('terminal-notifier is not installed.');
-    console.log('It is recommended for reliable macOS notifications.');
-    console.log('(Without it, notifications fall back to osascript which may be blocked by macOS.)\n');
+    console.log('terminal-notifier is required but not installed.');
+    console.log('Without it, macOS notifications cannot be delivered reliably.\n');
 
     if (hasBrew()) {
       const installIndex = await singleSelect(
-        'Install terminal-notifier now?',
+        'Install terminal-notifier now via Homebrew?',
         [
-          { label: 'Yes - install via Homebrew (recommended)', default: true },
-          { label: 'No - skip, use osascript fallback', default: false },
+          { label: 'Yes - install now (required to continue)', default: true },
+          { label: 'No - abort setup', default: false },
         ]
       );
 
-      if (installIndex === 0) {
-        try {
-          await installTerminalNotifier();
-          console.log('\nterminal-notifier installed successfully!');
-        } catch (err) {
-          console.error('\nFailed to install terminal-notifier:', err.message);
-          console.log('Continuing with osascript fallback...');
-        }
+      if (installIndex !== 0) {
+        console.log('\nSetup aborted. Install terminal-notifier first:');
+        console.log('  brew install terminal-notifier');
+        process.exit(1);
+      }
+
+      try {
+        await installTerminalNotifier();
+        console.log('\nterminal-notifier installed successfully!');
+      } catch (err) {
+        console.error('\nFailed to install terminal-notifier:', err.message);
+        console.log('Install it manually and re-run setup:');
+        console.log('  brew install terminal-notifier');
+        process.exit(1);
+      }
+
+      // Verify installation succeeded
+      if (!hasTerminalNotifier()) {
+        console.error('\nterminal-notifier still not found after installation.');
+        console.log('Install it manually and re-run setup:');
+        console.log('  brew install terminal-notifier');
+        process.exit(1);
       }
     } else {
-      console.log('Homebrew is not installed. To install terminal-notifier manually:');
+      console.log('Homebrew is not installed. Install terminal-notifier manually:');
       console.log('  brew install terminal-notifier');
-      console.log('Continuing with osascript fallback...\n');
+      console.log('\nThen re-run setup.');
+      process.exit(1);
     }
   } else {
     console.log('terminal-notifier: installed');
@@ -96,11 +110,11 @@ export async function run() {
   );
   const events = eventIndices.map((i) => EVENT_KEYS[i]);
 
-  // 3. Select sound
+  // 2. Select sound
   const soundIndex = await singleSelect('Notification sound:', SOUNDS);
   const sound = SOUNDS[soundIndex].label;
 
-  // 4. Notify when terminal is focused?
+  // 3. Notify when terminal is focused?
   const focusedIndex = await singleSelect(
     'Notify when terminal is in foreground?',
     [
@@ -110,17 +124,23 @@ export async function run() {
   );
   const notifyWhenFocused = focusedIndex === 0;
 
+  // 4. Detect terminal and persist bundleId as runtime fallback
+  const terminal = detectTerminal();
+  const terminalBundleId = terminal.bundleId || null;
+
   // 5. Save config
   const channels = ['system-notification'];
-  const config = { channels, events, sound, notifyWhenFocused };
+  const config = { channels, events, sound, notifyWhenFocused, terminalBundleId };
   writeConfig(config);
 
   // 6. Update settings.json hooks
   addHooks(events);
 
   // 7. Show summary
-  const terminal = detectTerminal();
   console.log(`\nDetected terminal: ${terminal.name}`);
+  if (terminalBundleId) {
+    console.log(`Terminal bundle ID: ${terminalBundleId}`);
+  }
   console.log('Configuration saved.');
   console.log('Hooks added to ~/.claude/settings.json');
   console.log('\nSetup complete! Run `claude-code-notifier test` to verify.');
