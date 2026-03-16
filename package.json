@@ -1,6 +1,6 @@
 {
   "name": "@vibe-zzz/claude-code-notifier",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Notification tool for Claude Code - get notified when Claude needs attention or finishes a task",
   "type": "module",
   "bin": {
