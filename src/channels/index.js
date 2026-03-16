@@ -9,7 +9,7 @@ const CHANNEL_MODULES = {
 /**
  * Dispatch notifications to all configured channels.
  * @param {string[]} channels - channel names to activate
- * @param {{ title: string, message: string, sound?: string }} opts
+ * @param {{ title: string, message: string, sound?: string, bundleId?: string | null, terminalPid?: number | null }} opts
  * @returns {Promise<void>}
  */
 export async function dispatch(channels, opts) {

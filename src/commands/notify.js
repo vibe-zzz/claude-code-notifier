@@ -8,6 +8,7 @@ import { readConfig } from '../config.js';
 import { dispatch } from '../channels/index.js';
 import { sanitize } from '../sanitize.js';
 import { isTerminalFocused } from '../focus.js';
+import { detectTerminal } from '../terminal.js';
 
 const EVENT_MESSAGES = {
   Notification: {
@@ -41,7 +42,12 @@ export async function run() {
       return;
     }
 
-    await dispatch(config.channels || ['system-notification'], { title, message, sound });
+    // Resolve bundleId and terminalPid for click-to-focus
+    const terminal = detectTerminal();
+    const bundleId = terminal.bundleId || config.terminalBundleId || null;
+    const terminalPid = terminal.pid || null;
+
+    await dispatch(config.channels || ['system-notification'], { title, message, sound, bundleId, terminalPid });
   } catch {
     // Hook must never block Claude - exit silently
     process.exit(0);

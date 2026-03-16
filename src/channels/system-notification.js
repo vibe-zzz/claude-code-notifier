@@ -1,14 +1,13 @@
 /**
  * System Notification channel.
- * Prefers terminal-notifier (more reliable), falls back to osascript.
+ * Requires terminal-notifier for reliable macOS notifications.
  */
 
 import { execFile, execFileSync } from 'node:child_process';
-import { escapeAppleScript } from '../sanitize.js';
 
 let hasTerminalNotifier = null;
 
-function checkTerminalNotifier() {
+export function checkTerminalNotifier() {
   if (hasTerminalNotifier !== null) return hasTerminalNotifier;
   try {
     execFileSync('which', ['terminal-notifier'], { timeout: 2000, stdio: 'ignore' });
@@ -20,21 +19,22 @@ function checkTerminalNotifier() {
 }
 
 /**
- * Send a macOS system notification.
- * @param {{ title: string, message: string, sound?: string }} opts
+ * Send a macOS system notification via terminal-notifier.
+ * @param {{ title: string, message: string, sound?: string, bundleId?: string | null, terminalPid?: number | null }} opts
  * @returns {Promise<void>}
  */
-export async function send({ title, message, sound = 'Ping' }) {
-  if (checkTerminalNotifier()) {
-    return sendViaTerminalNotifier({ title, message, sound });
+export async function send({ title, message, sound = 'Ping', bundleId = null, terminalPid = null }) {
+  if (!checkTerminalNotifier()) {
+    throw new Error('terminal-notifier is not installed. Run `claude-code-notifier setup` to install it.');
   }
-  return sendViaOsascript({ title, message, sound });
-}
 
-function sendViaTerminalNotifier({ title, message, sound }) {
   const args = ['-title', title, '-message', message];
   if (sound && sound !== 'None') {
     args.push('-sound', sound);
+  }
+  const executeArg = buildExecuteArg(terminalPid, bundleId);
+  if (executeArg) {
+    args.push('-execute', executeArg);
   }
 
   return new Promise((resolve, reject) => {
@@ -45,19 +45,14 @@ function sendViaTerminalNotifier({ title, message, sound }) {
   });
 }
 
-function sendViaOsascript({ title, message, sound }) {
-  const t = escapeAppleScript(title);
-  const m = escapeAppleScript(message);
-  const soundPart = sound && sound !== 'None'
-    ? ` sound name "${escapeAppleScript(sound)}"`
-    : '';
-
-  const script = `display notification "${m}" with title "${t}"${soundPart}`;
-
-  return new Promise((resolve, reject) => {
-    execFile('osascript', ['-e', script], { timeout: 5000 }, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
+function buildExecuteArg(terminalPid, bundleId) {
+  const pid = Number(terminalPid);
+  if (Number.isInteger(pid) && pid > 0) {
+    const script = `tell application "System Events" to set frontmost of (first process whose unix id is ${pid}) to true`;
+    return `osascript -e '${script}'`;
+  }
+  if (bundleId && /^[a-zA-Z0-9.\-_]+$/.test(bundleId)) {
+    return `open -b ${bundleId}`;
+  }
+  return null;
 }

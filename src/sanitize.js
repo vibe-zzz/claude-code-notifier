@@ -1,21 +1,6 @@
 /**
- * Sanitize strings for safe use in osascript commands.
- * Prevents command injection via user-controlled input.
+ * Sanitize notification strings, stripping control characters.
  */
-
-/**
- * Escape a string for use inside AppleScript double-quoted strings.
- * @param {string} str
- * @returns {string}
- */
-export function escapeAppleScript(str) {
-  if (typeof str !== 'string') return '';
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\r?\n/g, ' ')
-    .slice(0, 500);
-}
 
 /**
  * Sanitize a notification title/message, stripping control characters.
