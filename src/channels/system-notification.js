@@ -102,6 +102,7 @@ function buildTerminalAppFocusScript(tty) {
     '    repeat with t in tabs of w',
     `      if tty of t is "${tty}" then`,
     '        set selected tab of w to t',
+    '        set index of w to 1',
     '        activate',
     '        return',
     '      end if',
