@@ -6,6 +6,31 @@ import { execSync, execFileSync } from 'node:child_process';
 
 let cached = null;
 
+function getTty() {
+  try {
+    let pid = process.ppid;
+    const visited = new Set();
+    for (let i = 0; i < 10 && pid > 1 && !visited.has(pid); i++) {
+      visited.add(pid);
+      const info = execFileSync('ps', ['-p', String(pid), '-o', 'ppid=,tty='], {
+        encoding: 'utf8', timeout: 2000
+      }).trim();
+      const m = info.match(/^\s*(\d+)\s+(\S+)$/);
+      if (!m) break;
+      const [, ppid, raw] = m;
+      if (raw && raw !== '??' && raw !== '?') {
+        if (raw.startsWith('/dev/')) return raw;
+        if (raw.startsWith('tty')) return `/dev/${raw}`;
+        return `/dev/tty${raw}`;
+      }
+      pid = parseInt(ppid, 10);
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 const KNOWN_TERMINALS = {
   'iTerm.app': 'iTerm2',
   'iTerm2': 'iTerm2',
@@ -33,16 +58,18 @@ const BUNDLE_IDS = {
 
 /**
  * Detect the current terminal application.
- * @returns {{ name: string, bundleId: string | null, pid: number | null }}
+ * @returns {{ name: string, bundleId: string | null, pid: number | null, tty: string | null }}
  */
 export function detectTerminal() {
   if (cached) return cached;
+
+  const tty = getTty();
 
   // 1. Walk process chain using osascript to dynamically query bundle ID and displayed name.
   //    Returns { name, bundleId, pid } when a GUI ancestor is found.
   const fromChain = detectFromProcessChain();
   if (fromChain) {
-    cached = fromChain;
+    cached = { ...fromChain, tty };
     return cached;
   }
 
@@ -50,12 +77,12 @@ export function detectTerminal() {
   const termProgram = process.env.TERM_PROGRAM;
   if (termProgram && KNOWN_TERMINALS[termProgram]) {
     const name = KNOWN_TERMINALS[termProgram];
-    cached = { name, bundleId: BUNDLE_IDS[name] || null, pid: null };
+    cached = { name, bundleId: BUNDLE_IDS[name] || null, pid: null, tty };
     return cached;
   }
 
   // 3. Fallback
-  cached = { name: termProgram || 'Unknown', bundleId: null, pid: null };
+  cached = { name: termProgram || 'Unknown', bundleId: null, pid: null, tty };
   return cached;
 }
 
