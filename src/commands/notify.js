@@ -42,12 +42,13 @@ export async function run() {
       return;
     }
 
-    // Resolve bundleId and terminalPid for click-to-focus
+    // Resolve bundleId, terminalPid, and tty for click-to-focus
     const terminal = detectTerminal();
     const bundleId = terminal.bundleId || config.terminalBundleId || null;
     const terminalPid = terminal.pid || null;
+    const tty = terminal.tty || null;
 
-    await dispatch(config.channels || ['system-notification'], { title, message, sound, bundleId, terminalPid });
+    await dispatch(config.channels || ['system-notification'], { title, message, sound, bundleId, terminalPid, tty });
   } catch {
     // Hook must never block Claude - exit silently
     process.exit(0);
