@@ -29,6 +29,11 @@ export async function run() {
       readStdin(2000),
     ]);
 
+    // Skip idle_prompt notifications (Claude waiting for user input)
+    if (stdinData?.notification_type === 'idle_prompt') {
+      return;
+    }
+
     // Determine event type and message
     const hookEvent = stdinData?.hook_event_name || 'Notification';
     const defaults = EVENT_MESSAGES[hookEvent] || EVENT_MESSAGES.Notification;
